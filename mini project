@@ -1,0 +1,315 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*; // For List, ArrayList
+
+// Base class Question (inheritance)
+abstract class Question implements Serializable {
+    protected String questionText;
+
+    public Question(String questionText) {
+        this.questionText = questionText;
+    }
+
+    public String getQuestionText() {
+        return questionText;
+    }
+
+    public abstract boolean checkAnswer(String answer);
+}
+
+// Multiple Choice Question (inheritance)
+class MultipleChoiceQuestion extends Question {
+    private java.util.List<String> options;
+    private String correctAnswer;
+
+    public MultipleChoiceQuestion(String questionText, java.util.List<String> options, String correctAnswer) {
+        super(questionText);
+        this.options = options;
+        this.correctAnswer = correctAnswer;
+    }
+
+    public java.util.List<String> getOptions() {
+        return options;
+    }
+
+    @Override
+    public boolean checkAnswer(String answer) {
+        return answer.equalsIgnoreCase(correctAnswer);
+    }
+}
+
+// True/False Question (inheritance)
+class TrueFalseQuestion extends Question {
+    private boolean correctAnswer;
+
+    public TrueFalseQuestion(String questionText, boolean correctAnswer) {
+        super(questionText);
+        this.correctAnswer = correctAnswer;
+    }
+
+    @Override
+    public boolean checkAnswer(String answer) {
+        return (answer.equalsIgnoreCase("true") && correctAnswer) || 
+               (answer.equalsIgnoreCase("false") && !correctAnswer);
+    }
+}
+
+// QuizManager class to handle quiz operations
+class QuizManager {
+    private java.util.List<Question> questions = new ArrayList<>();
+    private int currentQuestionIndex = 0;
+    private int score = 0;
+
+    // Load sample questions
+    public void addSampleQuestions() {
+        questions.add(new MultipleChoiceQuestion("What is the capital of France?", 
+            Arrays.asList("Berlin", "Madrid", "Paris", "Rome"), "Paris"));
+        questions.add(new MultipleChoiceQuestion("Which planet is known as the Red Planet?", 
+            Arrays.asList("Earth", "Mars", "Jupiter", "Saturn"), "Mars"));
+        questions.add(new TrueFalseQuestion("The earth is the third planet from the Sun.", true));
+        questions.add(new TrueFalseQuestion("Water boils at 100 degrees Celsius.", true));
+        questions.add(new MultipleChoiceQuestion("Which gas is essential for us to breathe?", 
+            Arrays.asList("Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"), "Oxygen"));
+        questions.add(new MultipleChoiceQuestion("Which is the largest ocean on Earth?", 
+            Arrays.asList("Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"), "Pacific Ocean"));
+        questions.add(new TrueFalseQuestion("Humans share 50% of their DNA with bananas.", true));
+        questions.add(new MultipleChoiceQuestion("What is the currency of Japan?", 
+            Arrays.asList("Yen", "Won", "Dollar", "Euro"), "Yen"));
+        questions.add(new TrueFalseQuestion("The Great Wall of China is visible from space.", false));
+        questions.add(new MultipleChoiceQuestion("Who wrote 'Romeo and Juliet'?", 
+            Arrays.asList("Charles Dickens", "William Shakespeare", "Mark Twain", "J.K. Rowling"), "William Shakespeare"));
+    }
+
+    public java.util.List<Question> getQuestions() {
+        return questions;
+    }
+
+    public int getCurrentQuestionIndex() {
+        return currentQuestionIndex;
+    }
+
+    public void nextQuestion() {
+        currentQuestionIndex++;
+    }
+
+    public void previousQuestion() {
+        currentQuestionIndex--;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void incrementScore() {
+        score++;
+    }
+
+    public boolean hasMoreQuestions() {
+        return currentQuestionIndex < questions.size() - 1;
+    }
+
+    public boolean hasPreviousQuestions() {
+        return currentQuestionIndex > 0;
+    }
+
+    public void reset() {
+        currentQuestionIndex = 0;
+        score = 0;
+    }
+}
+
+// Home Page GUI class
+class HomePageGUI extends JFrame implements ActionListener {
+    private JButton startQuizButton;
+    private JButton stopQuizButton;
+    private JLabel scoreLabel;
+    private QuizManager quizManager;
+
+    public HomePageGUI(QuizManager quizManager) {
+        this.quizManager = quizManager;
+
+        setTitle("Home Page - Online Quiz System");
+        setSize(300, 200);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new GridLayout(3, 1));
+
+        scoreLabel = new JLabel("Score: " + quizManager.getScore(), SwingConstants.CENTER);
+        add(scoreLabel);
+
+        startQuizButton = new JButton("Start Quiz");
+        startQuizButton.addActionListener(this);
+        add(startQuizButton);
+
+        stopQuizButton = new JButton("exit");
+        stopQuizButton.addActionListener(this);
+        add(stopQuizButton);
+
+        setVisible(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == startQuizButton) {
+            new QuizGUI(quizManager);
+            dispose(); // Close the home page
+        } else if (e.getSource() == stopQuizButton) {
+            // JOptionPane.showMessageDialog(this, "Do you want to exit");
+            System.exit(0);
+        }
+    }
+}
+
+// Quiz GUI class
+class QuizGUI extends JFrame implements ActionListener {
+    private QuizManager quizManager;
+    private JLabel questionLabel;
+    private JButton[] optionButtons;
+    private JPanel optionsPanel;
+    private JLabel scoreLabel;
+    private JButton nextButton;
+    private JButton backButton;
+
+    public QuizGUI(QuizManager quizManager) {
+        this.quizManager = quizManager;
+
+        setTitle("Online Quiz System");
+        setSize(400, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Question label at the top
+        questionLabel = new JLabel("", SwingConstants.CENTER);
+        questionLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        add(questionLabel, BorderLayout.NORTH);
+
+        // Options panel in the center
+        optionsPanel = new JPanel();
+        optionsPanel.setLayout(new GridLayout(4, 1, 10, 10)); // Reduce the button size and add spacing
+        add(optionsPanel, BorderLayout.CENTER);
+
+        // Score label at the bottom
+        scoreLabel = new JLabel("Score: 0", SwingConstants.CENTER);
+        add(scoreLabel, BorderLayout.SOUTH);
+
+        // Navigation buttons (Next and Back)
+        JPanel navigationPanel = new JPanel();
+        navigationPanel.setLayout(new FlowLayout());
+
+        backButton = new JButton("Back");
+        backButton.addActionListener(this);
+        backButton.setEnabled(false); // Initially disabled because it's the first question
+
+        nextButton = new JButton("Next");
+        nextButton.addActionListener(this);
+        nextButton.setEnabled(false); // Initially disabled until an answer is selected
+
+        navigationPanel.add(backButton);
+        navigationPanel.add(nextButton);
+        add(navigationPanel, BorderLayout.SOUTH);
+
+        displayQuestion();
+
+        setVisible(true);
+    }
+
+    private void displayQuestion() {
+        Question currentQuestion = quizManager.getQuestions().get(quizManager.getCurrentQuestionIndex());
+        questionLabel.setText(currentQuestion.getQuestionText());
+
+        optionsPanel.removeAll(); // Clear previous buttons
+        optionsPanel.revalidate();
+        optionsPanel.repaint();
+
+        if (currentQuestion instanceof MultipleChoiceQuestion) {
+            MultipleChoiceQuestion mcq = (MultipleChoiceQuestion) currentQuestion;
+            java.util.List<String> options = mcq.getOptions();
+            optionButtons = new JButton[options.size()];
+            for (int i = 0; i < options.size(); i++) {
+                optionButtons[i] = new JButton(options.get(i));
+                optionButtons[i].setBackground(Color.LIGHT_GRAY); // Default button color
+                optionButtons[i].setFont(new Font("Arial", Font.PLAIN, 14));
+                optionButtons[i].addActionListener(this);
+                optionsPanel.add(optionButtons[i]);
+            }
+        } else if (currentQuestion instanceof TrueFalseQuestion) {
+            optionButtons = new JButton[2];
+            optionButtons[0] = new JButton("True");
+            optionButtons[1] = new JButton("False");
+
+            for (JButton btn : optionButtons) {
+                btn.setBackground(Color.LIGHT_GRAY);
+                btn.setFont(new Font("Arial", Font.PLAIN, 14));
+                btn.addActionListener(this);
+                optionsPanel.add(btn);
+            }
+        }
+
+        // Manage the Back button enabling/disabling
+        backButton.setEnabled(quizManager.hasPreviousQuestions());
+
+        // Update layout to reflect new buttons
+        optionsPanel.revalidate();
+        optionsPanel.repaint();
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        JButton clickedButton = (JButton) e.getSource();
+        
+        if (clickedButton == nextButton) {
+            // Load the next question
+            if (quizManager.hasMoreQuestions()) {
+                quizManager.nextQuestion();
+                displayQuestion();
+            } else {
+                showFinalScore();
+            }
+            return;
+        }
+
+        if (clickedButton == backButton) {
+            // Load the previous question
+            quizManager.previousQuestion();
+            displayQuestion();
+            return;
+        }
+
+        // Handle answer selection
+        Question currentQuestion = quizManager.getQuestions().get(quizManager.getCurrentQuestionIndex());
+        String userAnswer = clickedButton.getText();
+
+        if (currentQuestion.checkAnswer(userAnswer)) {
+            quizManager.incrementScore();
+            clickedButton.setBackground(Color.GREEN); // Correct answer
+        } else {
+            clickedButton.setBackground(Color.RED); // Incorrect answer
+        }
+
+        // Disable all buttons after one answer is selected
+        for (JButton btn : optionButtons) {
+            btn.setEnabled(false);
+        }
+
+        // Enable the Next button
+        nextButton.setEnabled(true);
+        scoreLabel.setText("Score: " + quizManager.getScore());
+    }
+
+    private void showFinalScore() {
+        JOptionPane.showMessageDialog(this, "Quiz finished! Your final score: " + quizManager.getScore());
+        quizManager.reset(); // Reset the quiz for next time
+        new HomePageGUI(quizManager); // Return to home page
+        dispose(); // Close quiz window
+    }
+}
+
+// Main class
+public class Mini {
+    public static void main(String[] args) {
+        QuizManager quizManager = new QuizManager();
+        quizManager.addSampleQuestions();
+        new HomePageGUI(quizManager);
+    }
+}
